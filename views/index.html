@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<% include head.html %>
+</head>
+<body style="padding: 0;">
+	<div id="root">
+		<header>
+			<% include header.html %>
+		</header>
+		<el-dialog title="STDOUT Viewer" :visible.sync="stdViewer">
+			<h5>Source output message</h5>
+			<p v-if="stdout.stdout != undefined && stdout.stdout != null" v-html="stdout.stdout.replace(/\n/g, '<br/>').replace(/ /g, '&nbsp;')"></p>
+			<hr>
+			<h5>Error message</h5>
+			<p class="text-danger" v-if="stdout.stderr != undefined && stdout.stderr != null">{{ stdout.stderr }}</p>
+		</el-dialog>
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-lg-5 mb-3">
+<!--					<div class="descNgspice">-->
+<!--						<h2>Ngspice</h2>-->
+<!--						<p>SPICE (Simulation Program with Integrated Circuit Emphasis) is a widely used tool for simulating electrical circuits. The original version was developed at the Electronics Research Laboratory of the University of California, Berkeley. Dozens of letiations of SPICE exist, with both free and commercial versions available.-->
+
+<!--							This site allows you to run ngspice simulations from a web browser environment. Whether you are using a Windows, Linux, or Mac computer, a smart phone, or a tablet, you always should be able to run a SPICE simulation.-->
+<!--						</p>-->
+<!--					</div>-->
+					<h2>Editor</h2>
+					<p>Please write your ngspice netlist in the below editor.</p>
+					<form role="form">
+						<div class="form-group editorArea">
+
+							<textarea class="form-control mb-3" id="netlist" style="height: 55vh;">* DC analysis on a simple circuit network
+
+v1 vcc15 0 dc 15
+v2 vcc20 0 dc 20
+v3 vcc0 0 dc 0
+r1 a vcc15 100
+r2 a vcc20 200
+r3 a vcc0 50
+.dc v1 15 15 1
+* Print Resistance voltage
+.print dc v(vcc15,a) v(vcc20,a) v(vcc0,a)
+* Print Resistance current
+.print dc i(v1) i(v2) i(v3)
+
+*Please do not remove this line
+.control
+	run
+.endc
+.end</textarea>
+							<h3>Plots:</h3>
+							<textarea class="form-control" id="plotOption" rows="3">v(in) v(out)</textarea>
+						</div>
+					</form>
+					<div class="buttonArea">
+						<el-button id="doSubmit" type="primary" plain>Submit</el-button>
+						<el-button id="doSaveNetlist" type="primary" plain>Save Netlist</el-button>
+						<el-button id="doClear" type="danger" plain>Clear Plots</el-button>
+					</div>
+				</div>
+				<div class="col-lg-7" style="max-height: calc(100vh - 90px); overflow-y: auto;">
+					<div class="fsc">
+						<h2>Result</h2>
+						<el-button @click="stdViewer = true" type="primary" icon="el-icon-postcard" plain>Source STDOUT</el-button>
+					</div>
+					<div v-for="(item, index) in dataTables" :key="index" class="result-data-table">
+						<p v-html="item.title"></p>
+						<el-table :data="tableMap()[index]" style="width: 100%">
+							<el-table-column
+									v-for="(value, index2) in item.data" :key="index2"
+									:prop="'column' + index2" :label="value.columnName">
+							</el-table-column>
+
+						</el-table>
+					</div>
+
+					<code id="messages" style="background: white; color: #111;">
+						<p class="fromServer">Server acknowledgement goes here</p>
+					</code>
+
+					<div class="container" id="plot" style="display:none;">
+						<div class="row">
+							<div id="graph" style="width:600px;height:400px;" class="col-lg-6">
+
+							</div>
+
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+<script src="/ngStatic/js/index.js"></script>
+<script>
+	let stdout = "";
+	console.log("Client Started!!!");
+	//let socket = io.connect('http://localhost:3000');
+	let socket = io.connect();
+	console.log("Socket Created!!!");
+	socket.on('loadingPage', function (data) {
+		console.log('Client : '+data);
+		socket.emit('user',{socketID:socket.id});
+	});
+
+	let editorContent = document.getElementById("netlist");
+	let submitButton = document.getElementById("doSubmit");
+	let saveButton = document.getElementById("doSaveNetlist");
+	let clearButton = document.getElementById("doClear");
+	let messages  = document.getElementById("messages");
+	let plotArea = document.getElementById("plotArea");
+	let plotVariable = document.getElementById("plotOption");
+
+	submitButton.addEventListener("click", function() {
+		let netlist = editorContent.value;
+		let plotDetails = plotVariable.value.split("\n");
+		// let plotDetails = plotOption.split("\n");
+		let plotList = [];
+		for(let i = 0;i < plotDetails.length;i++){
+			if (plotDetails[i].trim()==""){
+				continue
+			}
+			else{
+				plotList.push(plotDetails[i].trim());
+			}
+
+		}
+
+		console.log("Netlist :"+editorContent.value);
+		messages.innerHTML = "";
+		socket.emit("netlist",{"netlist":netlist,"plotList":plotList});
+		document.getElementById('plot').style.display = 'block';
+	});
+
+	clearButton.addEventListener("click",function(){
+		document.getElementById('plot').style.display = 'none';
+		messages.innerHTML = "";
+
+	});
+
+	saveButton.addEventListener("click",function(){
+		let netlist = editorContent.value;
+		//  create a new Blob (html5 magic) that conatins the data from your form feild
+		let textFileAsBlob = new Blob([netlist], {type:'text/plain'});
+
+		let netListFileName = prompt('Enter name of netlist file to be saved');
+		if(!netListFileName){
+			alert("Please give the proper name");
+		}
+
+		// console.log(textFileAsBlob);
+
+		// create a link for our script to 'click'
+		let downloadLink = document.createElement("a");
+
+		downloadLink.download = netListFileName+'.cir.out';
+
+		// Link Name
+		downloadLink.innerHTML = "Netlist Download Link";
+
+		// allow our code to work in webkit & Gecko based browsers
+		// without the need for a if / else block.
+		window.URL = window.URL || window.webkitURL;
+
+		// Create the link Object.
+		downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+		// when link is clicked call a function to remove it from
+		// the DOM in case user wants to save a second file.
+		downloadLink.onclick = destroyClickedElement;
+		// make sure the link is hidden.
+		downloadLink.style.display = "none";
+		// add the link to the DOM
+		document.body.appendChild(downloadLink);
+
+		// click the new link
+		downloadLink.click();
+
+
+	});
+
+	socket.on("serverMessage", function(message) {
+		// console.log("RECEIVED : " + message);
+		console.log(message.stdout);
+		stdout = message;
+		app.parserSTD(stdout);
+		app.stdout = stdout;
+		//messages.innerHTML = "<br>" + message.stdout.replace(/\n/g, "<br/>").replace(/ /g, "&nbsp;") + "<br><p class=`text-danger`>"+ message.stderr.replace(/\n/g, "</p><br />");
+
+	});
+
+	socket.on("clearPlot",function(){
+		document.getElementById('plot').style.display = 'none';
+		messages.innerHTML = "";
+	});
+
+	socket.on("plotData",function(data){
+		let outData = data['outData'];
+		plotList = data['plotList'];
+		console.log("PlotList---->"+plotList);
+		let keys = Object.keys(outData);
+
+		nonStackPlot(keys,outData,plotList);
+
+	});
+
+	function destroyClickedElement(event)
+	{
+		// remove the link from the DOM
+		document.body.removeChild(event.target);
+	}
+
+	function nonStackPlot(keys,outData,PlotList)
+	{
+		traces = getTraces(keys,outData);
+
+		let layout = getLayout(keys,plotList);
+
+		Plotly.newPlot(document.getElementById('graph'), traces, layout);
+
+	}
+
+	function getTraces(keys,outData)
+	{
+		let traceObj = {};
+		let traces = [];
+		//Dynamically creating traces
+		for(let i=0; i<keys.length; i++){
+			if(keys[i]=='x-axis'){
+				continue;
+			}
+			else{
+				let trace = {
+					x: outData['x-axis'],
+					y: outData[keys[i]],
+					name:keys[i],
+					type: 'scatter'
+				};
+				traceObj[keys[i]] = trace;
+			}
+		}
+
+		let traceKey = Object.keys(traceObj);
+		for (let i=0;i<traceKey.length;i++) {
+			let value = traceObj[traceKey[i]];
+			traces.push(value);
+		}
+		return traces;
+	}
+
+	function getLayout(keys,PlotList)
+	{
+		let layout = {
+
+						'title':'Simulation Output',
+						yaxis: {
+									title: "Voltage(Volts) / Current(Amp)",
+									titlefont: {
+													family: 'Courier New, monospace',
+													size: 12,
+													color: '#7f7f7f'
+									}
+						},
+						xaxis: {
+									title:"time(Sec) / Frequency(Hz)",
+									showgrid: true,                 // remove the x-axis grid lines
+									titlefont: {
+													family: 'Courier New, monospace',
+													size: 12,
+													color: '#7f7f7f'
+									}
+						}
+		};
+
+		return layout;
+
+	}
+
+</script>
+</html>

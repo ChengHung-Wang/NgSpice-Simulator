@@ -1,0 +1,32 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Helvetica Neue,Helvetica,PingFang SC,Hiragino Sans GB,Microsoft YaHei,SimSun,sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+}
+.fcc {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.fsc {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+p {
+    color: #5e6d82;
+    line-height: 1.5em;
+}
+
+.result-data-table {
+    margin-bottom: 45px;
+}
+
+.el-dialog__body {
+    height: min(80vh, 550px);
+    overflow-y: auto;
+}
