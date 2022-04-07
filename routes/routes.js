@@ -7,23 +7,27 @@ module.exports = function(express,app,fs,os,io,PythonShell,scriptPath){
 	/*Home Page*/
 	router.get('/',function(req,res,next){
         res.render('index',{host:app.get('host'),title:'Ngspice Simulator'});
-    
     });
 
     router.get('/ngspice/index',function(req,res,next){
         res.render('index',{host:app.get('host'),title:'Ngspice Simulator'});
-    
     });
 
-    /*About Page*/
-    router.get('/ngspice/about',function(req,res,next){
-    	res.render('about',{title:'Ngspice Simulator'});
-    });
+	router.get('/ngspice/index',function(req,res,next){
+		res.render('index',{host:app.get('host'),title:'Ngspice Simulator'});
+	});
 
-    /*Contact Page*/
-    router.get('/ngspice/contact',function(req,res,next){
-    	res.render('contact',{title:'Ngspice Simulator'});
-    });
+
+
+    // /*About Page*/
+    // router.get('/ngspice/about',function(req,res,next){
+    // 	res.render('about',{title:'Ngspice Simulator'});
+    // });
+	//
+    // /*Contact Page*/
+    // router.get('/ngspice/contact',function(req,res,next){
+    // 	res.render('contact',{title:'Ngspice Simulator'});
+    // });
 
 	io.on('connection', function (socket) {
 		socketID = getSocketID(socket);
@@ -188,5 +192,13 @@ module.exports = function(express,app,fs,os,io,PythonShell,scriptPath){
 
 	});
 
+	router.all(/\/+admin|css|html|js|management|images|fonts/, function(req, res) {
+		res.status(403).render('403',{ host:app.get('host'),title:'想幹嘛？'});
+	})
+
 	app.use('/',router);
+
+	app.get('*', function(req, res){
+		res.status(404).render('404', {host:app.get('host'),title:'不可以色色'});
+	});
 }
