@@ -2,7 +2,7 @@ module.exports = function(express,app,fs,os,io,PythonShell,scriptPath){
 	console.log("Server started!!! ");	
 
 	var router = express.Router();
-	var pyEnv = '/usr/bin/python'
+	var pyEnv = '/opt/local/bin/python'
 
 	/*Home Page*/
 	router.get('/',function(req,res,next){

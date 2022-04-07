@@ -71,6 +71,14 @@ let app = new Vue({
          })
          return result;
       }
+   },
+   watch: {
+      // stdout:{
+      //    handler(){
+      //       this.dataTables = [];
+      //    },
+      //    deep:true
+      // }
    }
 });
 

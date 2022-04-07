@@ -30,19 +30,19 @@
 					<form role="form">
 						<div class="form-group editorArea">
 
-							<textarea class="form-control mb-3" id="netlist" style="height: 55vh;">* DC analysis on a simple circuit network
+							<textarea class="form-control mb-3" id="netlist" style="height: calc(100vh - 390px);">* Simple spice netlist
 
-v1 vcc15 0 dc 15
-v2 vcc20 0 dc 20
-v3 vcc0 0 dc 0
-r1 a vcc15 100
-r2 a vcc20 200
-r3 a vcc0 50
-.dc v1 15 15 1
-* Print Resistance voltage
-.print dc v(vcc15,a) v(vcc20,a) v(vcc0,a)
-* Print Resistance current
-.print dc i(v1) i(v2) i(v3)
+v1 vdd 0 1.8V
+
+m1 out in vdd vdd pch
+m2 out in 0 0 nch
+c1 out 0 1f
+
+v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 1.8 1600ps 0 1900ps 0 1950ps 1.8 2300ps 1.8 2350ps 0
+
+.model nch nmos
+.model pch pmos
+.tran  1p 2600p
 
 *Please do not remove this line
 .control
@@ -53,11 +53,10 @@ r3 a vcc0 50
 							<textarea class="form-control" id="plotOption" rows="3">v(in) v(out)</textarea>
 						</div>
 					</form>
-					<div class="buttonArea">
-						<el-button id="doSubmit" type="primary" plain>Submit</el-button>
-						<el-button id="doSaveNetlist" type="primary" plain>Save Netlist</el-button>
-						<el-button id="doClear" type="danger" plain>Clear Plots</el-button>
-					</div>
+					<el-button-group class="d-flex">
+						<el-button icon="el-icon-download" class="mt-3" id="doSaveNetlist" type="primary" plain>Save Netlist</el-button>
+						<el-button icon="el-icon-finished" class="mt-3 w-100" id="doSubmit" type="primary">Submit</el-button>
+					</el-button-group>
 				</div>
 				<div class="col-lg-7" style="max-height: calc(100vh - 90px); overflow-y: auto;">
 					<div class="fsc">
@@ -78,12 +77,8 @@ r3 a vcc0 50
 					<code id="messages" style="background: white; color: #111;">
 						<p class="fromServer">Server acknowledgement goes here</p>
 					</code>
-
-					<div class="container" id="plot" style="display:none;">
-						<div class="row">
-							<div id="graph" style="width:600px;height:400px;" class="col-lg-6">
-
-							</div>
+					<div id="plot" style="display:none;">
+						<div id="graph" class="mt-3" style="width:100%; height: calc(100vh - 180px);">
 
 						</div>
 					</div>
@@ -113,6 +108,12 @@ r3 a vcc0 50
 	let plotVariable = document.getElementById("plotOption");
 
 	submitButton.addEventListener("click", function() {
+		// clear vue stdout
+		app.stdout = {
+			stdout: "",
+			stderr: ""
+		}
+		app.dataTables = [];
 		let netlist = editorContent.value;
 		let plotDetails = plotVariable.value.split("\n");
 		// let plotDetails = plotOption.split("\n");
@@ -132,12 +133,12 @@ r3 a vcc0 50
 		socket.emit("netlist",{"netlist":netlist,"plotList":plotList});
 		document.getElementById('plot').style.display = 'block';
 	});
-
-	clearButton.addEventListener("click",function(){
-		document.getElementById('plot').style.display = 'none';
-		messages.innerHTML = "";
-
-	});
+	//
+	// clearButton.addEventListener("click",function(){
+	// 	document.getElementById('plot').style.display = 'none';
+	// 	messages.innerHTML = "";
+	//
+	// });
 
 	saveButton.addEventListener("click",function(){
 		let netlist = editorContent.value;
@@ -183,8 +184,8 @@ r3 a vcc0 50
 		// console.log("RECEIVED : " + message);
 		console.log(message.stdout);
 		stdout = message;
-		app.parserSTD(stdout);
 		app.stdout = stdout;
+		app.parserSTD(stdout);
 		//messages.innerHTML = "<br>" + message.stdout.replace(/\n/g, "<br/>").replace(/ /g, "&nbsp;") + "<br><p class=`text-danger`>"+ message.stderr.replace(/\n/g, "</p><br />");
 
 	});
@@ -216,7 +217,14 @@ r3 a vcc0 50
 
 		let layout = getLayout(keys,plotList);
 
-		Plotly.newPlot(document.getElementById('graph'), traces, layout);
+		Plotly.newPlot(document.getElementById('graph'), traces, layout, {
+			displayModeBar: true,
+			displaylogo: false,
+			modeBarButtonsToRemove: [
+				"sendDataToCloud",
+				"toImage"
+			]
+		});
 
 	}
 
