@@ -3,6 +3,7 @@ let app = new Vue({
    data() {
       return {
          dataTables: [],
+         loading: true,
          stdViewer: false,
          stdout: {
             stderr: "",

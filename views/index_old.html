@@ -4,16 +4,13 @@
 	<% include head.html %>
 </head>
 <body style="padding: 0;">
-	<div id="root" v-loading="loading" v-bind:class="{noScroll: loading}">
+	<div id="root">
 		<header>
 			<% include header.html %>
 		</header>
 		<el-dialog title="STDOUT Viewer" :visible.sync="stdViewer">
 			<h5>Source output message</h5>
 			<p v-if="stdout.stdout != undefined && stdout.stdout != null" v-html="stdout.stdout.replace(/\n/g, '<br/>').replace(/ /g, '&nbsp;')"></p>
-			<p
-					v-if="stdout.stdout != undefined && stdout.stdout != null && stdout.stdout.match(/<img/g) && stdout.stdout.split('<').length <= 2"
-					v-html="stdout.stdout"></p>
 			<hr>
 			<h5>Error message</h5>
 			<p class="text-danger" v-if="stdout.stderr != undefined && stdout.stderr != null">{{ stdout.stderr }}</p>
@@ -58,7 +55,7 @@ v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 
 					</form>
 					<el-button-group class="d-flex">
 						<el-button icon="el-icon-download" class="mt-3" id="doSaveNetlist" type="primary" plain>Save Netlist</el-button>
-						<el-button icon="el-icon-finished" class="mt-3 w-100" id="doSubmit" type="primary" @click="loading = true">Submit</el-button>
+						<el-button icon="el-icon-finished" class="mt-3 w-100" id="doSubmit" type="primary">Submit</el-button>
 					</el-button-group>
 				</div>
 				<div class="col-lg-7" style="max-height: calc(100vh - 90px); overflow-y: auto;">
@@ -80,12 +77,7 @@ v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 
 					<code id="messages" style="background: white; color: #111;">
 						<p class="fromServer">Server acknowledgement goes here</p>
 					</code>
-					<p
-							v-if="stdout.stdout != undefined && stdout.stdout != null && stdout.stdout.match(/<img/g) && stdout.stdout.split('<').length <= 2"
-							v-html="stdout.stdout">
-
-					</p>
-					<div id="plot" style="display: none;">
+					<div id="plot" style="display:none;">
 						<div id="graph" class="mt-3" style="width:100%; height: calc(100vh - 180px);">
 
 						</div>
@@ -99,12 +91,12 @@ v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 
 <script>
 	let stdout = "";
 	console.log("Client Started!!!");
+	//let socket = io.connect('http://localhost:3000');
 	let socket = io.connect();
 	console.log("Socket Created!!!");
 	socket.on('loadingPage', function (data) {
 		console.log('Client : '+data);
-		socket.emit('user', {socketID: socket.id});
-		app.loading = false;
+		socket.emit('user',{socketID:socket.id});
 	});
 
 	let editorContent = document.getElementById("netlist");
@@ -122,24 +114,10 @@ v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 
 			stderr: ""
 		}
 		app.dataTables = [];
-		document.getElementById('plot').style.display = 'none';
-		window.$("#graph").html("");
-		window.$("#plot").hide();
-		messages.innerHTML = "";
-
 		let netlist = editorContent.value;
 		let plotDetails = plotVariable.value.split("\n");
 		// let plotDetails = plotOption.split("\n");
-		let plotList = [];	
-		if (! netlist.match(/\.control\n*[\S\s]+\.\end/gm)) {
-			app.$message({
-				showClose: true,
-				message: 'The SPICE isn\'t valid format is incorrect. Please refresh the page and modify it in the original format.',
-				type: 'error'
-			});
-			app.loading = false;
-			return;
-		}
+		let plotList = [];
 		for(let i = 0;i < plotDetails.length;i++){
 			if (plotDetails[i].trim()==""){
 				continue
@@ -149,7 +127,8 @@ v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 
 			}
 
 		}
-		//console.log("Netlist :"+editorContent.value);
+
+		console.log("Netlist :"+editorContent.value);
 		messages.innerHTML = "";
 		socket.emit("netlist",{"netlist":netlist,"plotList":plotList});
 		document.getElementById('plot').style.display = 'block';
@@ -202,18 +181,18 @@ v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 
 	});
 
 	socket.on("serverMessage", function(message) {
+		// console.log("RECEIVED : " + message);
+		console.log(message.stdout);
 		stdout = message;
-		app.loading = false;
 		app.stdout = stdout;
 		app.parserSTD(stdout);
-		window.$("#plot").hide();
 		//messages.innerHTML = "<br>" + message.stdout.replace(/\n/g, "<br/>").replace(/ /g, "&nbsp;") + "<br><p class=`text-danger`>"+ message.stderr.replace(/\n/g, "</p><br />");
+
 	});
 
 	socket.on("clearPlot",function(){
 		document.getElementById('plot').style.display = 'none';
 		messages.innerHTML = "";
-		window.$("#plot").hide();
 	});
 
 	socket.on("plotData",function(data){
@@ -221,10 +200,11 @@ v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 
 		plotList = data['plotList'];
 		console.log("PlotList---->"+plotList);
 		let keys = Object.keys(outData);
+
 		nonStackPlot(keys,outData,plotList);
-		window.$("#plot").show();
-		app.loading = false;
+
 	});
+
 	function destroyClickedElement(event)
 	{
 		// remove the link from the DOM
@@ -279,26 +259,29 @@ v2 in 0 pwl 0ps 0 100ps 0 200ps 1.8 500ps 1.8 600ps 0 900ps 0 1100ps 1.8 1400ps 
 	function getLayout(keys,PlotList)
 	{
 		let layout = {
-			'title': 'Simulation Output',
-			yaxis: {
-				title: "Voltage(Volts) / Current(Amp)",
-				titlefont: {
-					family: 'Courier New, monospace',
-					size: 12,
-					color: '#7f7f7f'
-				}
-			},
-			xaxis: {
-				title:"time(Sec) / Frequency(Hz)",
-				showgrid: true,                 // remove the x-axis grid lines
-				titlefont: {
-					family: 'Courier New, monospace',
-					size: 12,
-					color: '#7f7f7f'
-				}
-			}
+
+						'title':'Simulation Output',
+						yaxis: {
+									title: "Voltage(Volts) / Current(Amp)",
+									titlefont: {
+													family: 'Courier New, monospace',
+													size: 12,
+													color: '#7f7f7f'
+									}
+						},
+						xaxis: {
+									title:"time(Sec) / Frequency(Hz)",
+									showgrid: true,                 // remove the x-axis grid lines
+									titlefont: {
+													family: 'Courier New, monospace',
+													size: 12,
+													color: '#7f7f7f'
+									}
+						}
 		};
+
 		return layout;
+
 	}
 
 </script>

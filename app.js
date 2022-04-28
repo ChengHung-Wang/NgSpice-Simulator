@@ -2,15 +2,21 @@ var express = require('express'),
 	path = require('path'),
 	config = require('./config/config.js'),
 	fs = require('fs'),
-    os = require('os'),
-    shelljs = require('shelljs/global'),
-    PythonShell = require('python-shell'),
-    ejs = require('ejs')
-    
+	os = require('os'),
+	shelljs = require('shelljs/global'),
+	PythonShell = require('python-shell'),
+	ejs = require('ejs')
 
 
 var app = express();
 
+// var keyPath = '~/private.key';
+// var certPath = '~/certificate.pem';
+//
+// var hskey = fs.readFileSync(keyPath);
+// var hscert = fs.readFileSync(certPath);
+
+var scriptPath = path.join(__dirname,'scripts')
 var scriptPath = path.join(__dirname,'scripts')
 //Set views property
 app.set('views',path.join(__dirname,'views'));
@@ -31,6 +37,8 @@ app.set('port',process.env.PORT||3000);
 //Setting config
 app.set('host',config.host);
 
+// app.set('key', hskey);
+// app.set('cert', hscert);
 
 //Create server which listen app 
 var server = require('http').createServer(app);
@@ -44,5 +52,5 @@ require('./routes/routes.js')(express,app,fs,os,io,PythonShell,scriptPath);
 
 //Listen server
 server.listen(app.get('port'),function(){
-    console.log('Ngspice Simulator is running on port : '+app.get('port'));
+	console.log('Ngspice Simulator is running on port : '+app.get('port'));
 })
